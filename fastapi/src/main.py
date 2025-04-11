@@ -12,28 +12,16 @@ import json
 import aiohttp
 import urllib
 import jwt
+from src.config import settings
 
-
-ORIGIN_URL = environ.get("ORIGIN_URL")
-
-OAUTH2_GOOGLE_CLIENT_ID = environ.get("OAUTH2_GOOGLE_CLIENT_ID")
-OAUTH2_GOOGLE_CLIENT_SECRET = environ.get("OAUTH2_GOOGLE_CLIENT_SECRET")
-OAUTH2_GOOGLE_REDIRECT_URI = environ.get("OAUTH2_GOOGLE_REDIRECT_URI")
-
-OAUTH2_YANDEX_CLIENT_ID = environ.get("OAUTH2_YANDEX_CLIENT_ID")
-OAUTH2_YANDEX_CLIENT_SECRET = environ.get("OAUTH2_YANDEX_CLIENT_SECRET")
-OAUTH2_YANDEX_REDIRECT_URI = environ.get("OAUTH2_YANDEX_REDIRECT_URI")
-
-REDIS_HOST = "redis"
-REDIS_PORT = 6379
 
 app = FastAPI(
     root_path="/ui-backend",
-    title="Candlestick Service Backend for Frontend",
+    title=settings.app.title,
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[ORIGIN_URL],
+    allow_origins=[settings.app.origin_url],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,8 +34,8 @@ class CsrfToken(BaseModel):
 
 async def get_redis_client() -> redis.asyncio.Redis:
     redis_client = redis.asyncio.Redis(
-        host=REDIS_HOST,
-        port=REDIS_PORT,
+        host=settings.redis.host,
+        port=settings.redis.port,
         decode_responses=True,
     )
     return redis_client
@@ -93,9 +81,9 @@ async def get_google_token(code: str) -> dict:
     token_endpoint = await get_google_token_endpoint()
     payload = {
         "code": code,
-        "client_id": OAUTH2_GOOGLE_CLIENT_ID,
-        "client_secret": OAUTH2_GOOGLE_CLIENT_SECRET,
-        "redirect_uri": OAUTH2_GOOGLE_REDIRECT_URI,
+        "client_id": settings.oauth.google.client_id,
+        "client_secret": settings.oauth.google.client_secret,
+        "redirect_uri": settings.oauth.google.redirect_uri,
         "grant_type": "authorization_code",
     }
     payload = aiohttp.FormData(payload)
@@ -109,8 +97,8 @@ async def get_yandex_token(code: str) -> dict:
     token_endpoint = await get_yandex_token_endpoint()
     payload = {
         "code": code,
-        "client_id": OAUTH2_YANDEX_CLIENT_ID,
-        "client_secret": OAUTH2_YANDEX_CLIENT_SECRET,
+        "client_id": settings.oauth.yandex.client_id,
+        "client_secret": settings.oauth.yandex.client_secret,
         "grant_type": "authorization_code",
     }
     payload = aiohttp.FormData(payload)
@@ -197,7 +185,7 @@ async def google_code(
         value=json.dumps(session_data),
     )
     await redis_client.close()
-    return RedirectResponse(ORIGIN_URL)
+    return RedirectResponse(settings.app.origin_url)
 
 
 @app.get("/oauth2/google/auth")
@@ -213,10 +201,10 @@ async def google_auth(
         return {"msg": 'csrf_token != session_data["csrf_token"]'}
     authorization_endpoint = await get_google_authorization_endpoint()
     params = {
-        "client_id": OAUTH2_GOOGLE_CLIENT_ID,
+        "client_id": settings.oauth.google.client_id,
         "response_type": "code",
         "scope": "openid email",
-        "redirect_uri": OAUTH2_GOOGLE_REDIRECT_URI,
+        "redirect_uri": settings.oauth.google.redirect_uri,
         "state": csrf_token,
         "nonce": uuid4().hex,
         "access_type": "offline",
@@ -253,7 +241,7 @@ async def yandex_code(
         value=json.dumps(session_data),
     )
     await redis_client.close()
-    return RedirectResponse(ORIGIN_URL)
+    return RedirectResponse(settings.app.origin_url)
 
 
 @app.get("/oauth2/yandex/auth")
@@ -269,10 +257,10 @@ async def yandex_auth(
         return {"msg": 'csrf_token != session_data["csrf_token"]'}
     authorization_endpoint = await get_yandex_authorization_endpoint()
     params = {
-        "client_id": OAUTH2_YANDEX_CLIENT_ID,
+        "client_id": settings.oauth.yandex.client_id,
         "response_type": "code",
         "scope": "login:email",
-        "redirect_uri": OAUTH2_YANDEX_REDIRECT_URI,
+        "redirect_uri": settings.oauth.yandex.redirect_uri,
         "state": csrf_token,
         "nonce": uuid4().hex,
         "force_confirm": "yes",
