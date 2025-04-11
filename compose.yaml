@@ -1,0 +1,25 @@
+services:
+
+  react:
+    build: ./react/.
+    command: sh -c "npm run dev -- --host"
+    expose:
+      - "8102"
+    # volumes:
+    #   - ./react/src/:/home/node/src/
+
+  fastapi:
+    build: ./fastapi/.
+    command: "gunicorn -w 4 -k uvicorn.workers.UvicornWorker src.main:app -b 0.0.0.0:8101"
+    expose:
+      - "8101"
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/configs:/etc/nginx/conf.d:ro
+    expose:
+      - "80"
+    ports:
+      - "80:80"
