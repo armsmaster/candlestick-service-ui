@@ -1,9 +1,8 @@
 import urllib.parse
 from fastapi import FastAPI, Cookie
-from fastapi.responses import Response, RedirectResponse, JSONResponse
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 import jwt.algorithms
-from pydantic import BaseModel
 from uuid import uuid4
 from typing import Annotated
 from os import environ
@@ -13,7 +12,7 @@ import aiohttp
 import urllib
 import jwt
 from src.config import settings
-
+from src.api import api_router
 
 app = FastAPI(
     root_path="/ui-backend",
@@ -26,10 +25,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-class CsrfToken(BaseModel):
-    token: str
+app.include_router(api_router)
 
 
 async def get_redis_client() -> redis.asyncio.Redis:
@@ -269,77 +265,3 @@ async def yandex_auth(
     url += urllib.parse.urlencode(params)
     await redis_client.close()
     return RedirectResponse(url)
-
-
-@app.get("/csrf-token")
-async def get_csrf_token(
-    candles_session: Annotated[str | None, Cookie()] = None,
-) -> CsrfToken:
-    redis_client = await get_redis_client()
-    session_data = await redis_client.get(name=f"session:{candles_session}")
-    session_data = json.loads(session_data)
-    if "csrf_token" in session_data:
-        return CsrfToken(token=session_data["csrf_token"])
-    session_data["csrf_token"] = f"csrf:{uuid4().hex}"
-    await redis_client.set(
-        name=f"session:{candles_session}",
-        value=json.dumps(session_data),
-    )
-    await redis_client.close()
-    return CsrfToken(token=session_data["csrf_token"])
-
-
-@app.get("/session")
-async def session(candles_session: Annotated[str | None, Cookie()] = None):
-    redis_client = await get_redis_client()
-    if candles_session is None:
-        session = uuid4().hex
-        await redis_client.set(name=f"session:{session}", value="{}")
-        session_data = dict()
-    else:
-        session = candles_session
-        session_data = await redis_client.get(name=f"session:{session}")
-        session_data = json.loads(session_data)
-    if "google" in session_data and "token" not in session_data["google"]:
-        token = await get_google_token(code=session_data["google"]["code"])
-        session_data["google"]["token"] = token
-        await redis_client.set(
-            name=f"session:{candles_session}",
-            value=json.dumps(session_data),
-        )
-    if "google" in session_data and "token" in session_data["google"]:
-        id_token = session_data["google"]["token"]["id_token"]
-        id_token_claims = jwt.decode(id_token, options={"verify_signature": False})
-        id_token_headers = jwt.get_unverified_header(id_token)
-        session_data["google"]["token"]["id_token_claims"] = id_token_claims
-        session_data["google"]["token"]["id_token_headers"] = id_token_headers
-        session_data["google"]["token"]["id_token_is_valid"] = (
-            await validate_google_id_token(id_token)
-        )
-    if "yandex" in session_data and "token" in session_data["yandex"]:
-        if "user_info" not in session_data["yandex"]:
-            session_data["yandex"]["user_info"] = await get_yandex_user_info(
-                session_data["yandex"]["token"]["access_token"]
-            )
-            await redis_client.set(
-                name=f"session:{candles_session}",
-                value=json.dumps(session_data),
-            )
-    response = JSONResponse(session_data)
-    response.set_cookie(key="candles_session", value=session)
-    await redis_client.close()
-    return response
-
-
-@app.delete("/session")
-async def session(candles_session: Annotated[str | None, Cookie()] = None):
-    redis_client = await get_redis_client()
-    if candles_session is not None:
-        session = candles_session
-        await redis_client.delete(f"session:{session}")
-    session = uuid4().hex
-    await redis_client.set(name=f"session:{session}", value="{}")
-    await redis_client.close()
-    response = Response()
-    response.set_cookie(key="candles_session", value=session)
-    return response
