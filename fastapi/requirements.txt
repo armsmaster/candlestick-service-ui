@@ -5,3 +5,4 @@ redis
 aiohttp
 pyjwt
 cryptography
+pydantic-settings
