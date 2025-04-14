@@ -1,5 +1,6 @@
 import json
 import urllib.parse
+from http import HTTPStatus
 from typing import Annotated
 from uuid import uuid4
 
@@ -85,7 +86,11 @@ async def validate_google_id_token(id_token: str) -> bool:
         return False
 
 
-@api_router.get("/code")
+@api_router.get(
+    "/code",
+    response_class=RedirectResponse,
+    status_code=HTTPStatus.PERMANENT_REDIRECT,
+)
 async def google_code(
     state: str,
     code: str,
@@ -110,7 +115,11 @@ async def google_code(
     return RedirectResponse(settings.app.origin_url)
 
 
-@api_router.get("/auth")
+@api_router.get(
+    "/auth",
+    response_class=RedirectResponse,
+    status_code=HTTPStatus.PERMANENT_REDIRECT,
+)
 async def google_auth(
     csrf_token: str,
     candles_session: Annotated[str | None, Cookie()] = None,

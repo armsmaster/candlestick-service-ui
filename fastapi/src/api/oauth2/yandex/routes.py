@@ -1,5 +1,6 @@
 import json
 import urllib.parse
+from http import HTTPStatus
 from typing import Annotated
 from uuid import uuid4
 
@@ -60,7 +61,11 @@ async def get_yandex_user_info(access_token: str) -> dict:
             return user_info
 
 
-@api_router.get("/code")
+@api_router.get(
+    "/code",
+    response_class=RedirectResponse,
+    status_code=HTTPStatus.PERMANENT_REDIRECT,
+)
 async def yandex_code(
     state: str,
     code: str,
@@ -86,7 +91,11 @@ async def yandex_code(
     return RedirectResponse(settings.app.origin_url)
 
 
-@api_router.get("/auth")
+@api_router.get(
+    "/auth",
+    response_class=RedirectResponse,
+    status_code=HTTPStatus.PERMANENT_REDIRECT,
+)
 async def yandex_auth(
     csrf_token: str,
     candles_session: Annotated[str | None, Cookie()] = None,
