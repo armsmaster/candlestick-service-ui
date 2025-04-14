@@ -3,7 +3,9 @@ __all__ = [
 ]
 
 from src.api.session import api_router as api_router_session
+from src.api.oauth2 import router_oauth
 from fastapi import APIRouter
 
 api_router = APIRouter()
 api_router.include_router(api_router_session)
+api_router.include_router(router_oauth)
