@@ -1,12 +1,14 @@
 import json
-from uuid import uuid4
 from typing import Annotated
-from fastapi import APIRouter, Cookie, Depends, Response
-from fastapi.responses import JSONResponse
-from redis.asyncio import Redis
-from src.api.session.schemas import SessionData
-from src.api.dependency import get_redis_client
+from uuid import uuid4
+
 import jwt
+from redis.asyncio import Redis
+
+from fastapi import APIRouter, Cookie, Depends, Response
+
+from src.api.dependency import get_redis_client
+from src.api.session.schemas import SessionData
 
 api_router = APIRouter(prefix="/session", tags=["session"])
 

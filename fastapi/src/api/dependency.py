@@ -1,5 +1,7 @@
 from typing import AsyncGenerator
+
 import redis
+
 from src.config import settings
 
 
