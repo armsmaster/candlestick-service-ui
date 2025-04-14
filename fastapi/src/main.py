@@ -1,18 +1,18 @@
-import urllib.parse
-from fastapi import FastAPI, Cookie
-from fastapi.responses import RedirectResponse
-from fastapi.middleware.cors import CORSMiddleware
-import jwt.algorithms
-from uuid import uuid4
-from typing import Annotated
-from os import environ
-import redis
 import json
-import aiohttp
 import urllib
-import jwt
-from src.config import settings
+import urllib.parse
+from typing import Annotated
+from uuid import uuid4
+
+import aiohttp
+import redis
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+
+from fastapi import Cookie, FastAPI
+
 from src.api import api_router
+from src.config import settings
 
 app = FastAPI(
     root_path="/ui-backend",

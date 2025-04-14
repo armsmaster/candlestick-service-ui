@@ -1,16 +1,18 @@
+import json
+import urllib.parse
 from typing import Annotated
+from uuid import uuid4
+
 import aiohttp
 import jwt
 import jwt.algorithms
-import json
-import urllib.parse
-from uuid import uuid4
-from redis.asyncio import Redis
-from fastapi import APIRouter, Cookie, Depends
 from fastapi.responses import RedirectResponse
-from src.config import settings
-from src.api.dependency import get_redis_client
+from redis.asyncio import Redis
 
+from fastapi import APIRouter, Cookie, Depends
+
+from src.api.dependency import get_redis_client
+from src.config import settings
 
 api_router = APIRouter(prefix="/google")
 openid_config_url = "https://accounts.google.com/.well-known/openid-configuration"
@@ -68,7 +70,7 @@ async def validate_google_id_token(id_token: str) -> bool:
     key = public_keys[kid]
 
     try:
-        payload = jwt.decode(
+        jwt.decode(
             id_token,
             key=key,
             algorithms=["RS256"],
