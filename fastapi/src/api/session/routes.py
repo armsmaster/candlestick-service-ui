@@ -2,7 +2,6 @@ import json
 from typing import Annotated
 from uuid import uuid4
 
-import jwt
 from redis.asyncio import Redis
 
 from fastapi import APIRouter, Cookie, Depends, Response
@@ -34,31 +33,14 @@ async def get_session(
 
     csrf_token = session_data["csrf_token"]
 
-    if "google" in session_data:
-        id_token = session_data["google"]["token"]["id_token"]
-        id_token_claims = jwt.decode(id_token, options={"verify_signature": False})
-        user_id = id_token_claims["sub"]
-        user_email = id_token_claims["email"]
+    if "is_authenticated" in session_data:
         return SessionData(
-            csrf_token=csrf_token,
-            is_authenticated=True,
-            oauth_provider="google",
-            user_id=user_id,
-            user_email=user_email,
-            debug_info=session_data,
-        )
-
-    if "yandex" in session_data:
-        user_info = session_data["yandex"]["user_info"]
-        user_id = user_info["id"]
-        user_email = user_info["default_email"]
-        return SessionData(
-            csrf_token=csrf_token,
-            is_authenticated=True,
-            oauth_provider="yandex",
-            user_id=user_id,
-            user_email=user_email,
-            debug_info=session_data,
+            csrf_token=session_data["csrf_token"],
+            is_authenticated=session_data["is_authenticated"],
+            oauth_provider=session_data["oauth_provider"],
+            user_id=session_data["user_id"],
+            user_email=session_data["user_email"],
+            debug_info={},
         )
 
     return SessionData(
@@ -67,7 +49,7 @@ async def get_session(
         oauth_provider=None,
         user_id=None,
         user_email=None,
-        debug_info=session_data,
+        debug_info={},
     )
 
 
