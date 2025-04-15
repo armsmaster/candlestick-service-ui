@@ -7,5 +7,5 @@ class ICodeProcessor(ABC):
     """Class responsible for retrieving user tokens from external Oauth API."""
 
     @abstractmethod
-    def get_token(self, csrf_token: str, code: str, scope: str) -> OauthData:
+    async def get_oauth_data(self, code: str) -> OauthData:
         raise NotImplementedError

@@ -10,19 +10,16 @@ from redis.asyncio import Redis
 
 from fastapi import APIRouter, Cookie, Depends
 
-from src.api.dependency import get_google_auth_processor, get_redis_client
+from src.api.dependency import (
+    get_google_auth_processor,
+    get_google_code_processor,
+    get_redis_client,
+)
 from src.config import settings
-from src.core import IAuthProcessor
+from src.core import IAuthProcessor, ICodeProcessor
 
 api_router = APIRouter(prefix="/google")
 openid_config_url = "https://accounts.google.com/.well-known/openid-configuration"
-
-
-async def get_google_token_endpoint() -> str:
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url=openid_config_url) as resp:
-            response_json = await resp.json()
-            return response_json["token_endpoint"]
 
 
 async def get_google_jwks_uri_endpoint() -> str:
@@ -30,22 +27,6 @@ async def get_google_jwks_uri_endpoint() -> str:
         async with session.get(url=openid_config_url) as resp:
             response_json = await resp.json()
             return response_json["jwks_uri"]
-
-
-async def get_google_token(code: str) -> dict:
-    token_endpoint = await get_google_token_endpoint()
-    payload = {
-        "code": code,
-        "client_id": settings.oauth.google.client_id,
-        "client_secret": settings.oauth.google.client_secret,
-        "redirect_uri": settings.oauth.google.redirect_uri,
-        "grant_type": "authorization_code",
-    }
-    payload = aiohttp.FormData(payload)
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url=token_endpoint, data=payload) as resp:
-            response_data = await resp.json()
-            return response_data
 
 
 async def validate_google_id_token(id_token: str) -> bool:
@@ -89,17 +70,23 @@ async def google_code(
     scope: str,
     candles_session: Annotated[str | None, Cookie()] = None,
     redis_client: Redis = Depends(get_redis_client),
+    google_code_processor: ICodeProcessor = Depends(get_google_code_processor),
 ) -> RedirectResponse:
     session_data = await redis_client.get(name=f"session:{candles_session}")
     session_data = json.loads(session_data)
     csrf_token = session_data["csrf_token"]
     if csrf_token != state:
         return {"msg": "csrf_token != state"}
-    session_data["google"] = {
-        "code": code,
-        "scope": scope,
-        "token": await get_google_token(code=code),
+
+    oauth_data = await google_code_processor.get_oauth_data(code=code)
+    session_data = {
+        "csrf_token": csrf_token,
+        "is_authenticated": True,
+        "oauth_provider": oauth_data.provider,
+        "user_id": oauth_data.user_id,
+        "user_email": oauth_data.user_email,
     }
+
     await redis_client.set(
         name=f"session:{candles_session}",
         value=json.dumps(session_data),

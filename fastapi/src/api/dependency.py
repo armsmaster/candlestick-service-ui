@@ -3,6 +3,7 @@ from typing import AsyncGenerator
 import redis
 
 from src.auth_processor import GoogleAuthProcessor, YandexAuthProcessor
+from src.code_processor import GoogleCodeProcessor, YandexCodeProcessor
 from src.config import settings
 
 
@@ -22,3 +23,11 @@ async def get_google_auth_processor() -> AsyncGenerator[GoogleAuthProcessor, Non
 
 async def get_yandex_auth_processor() -> AsyncGenerator[YandexAuthProcessor, None]:
     yield YandexAuthProcessor()
+
+
+async def get_google_code_processor() -> AsyncGenerator[GoogleCodeProcessor, None]:
+    yield GoogleCodeProcessor()
+
+
+async def get_yandex_code_processor() -> AsyncGenerator[YandexCodeProcessor, None]:
+    yield YandexCodeProcessor()
