@@ -20,6 +20,7 @@ class OauthGoogleSettings(BaseSettings):
     client_id: str
     client_secret: str
     redirect_uri: str
+    scope: str
 
     model_config = SettingsConfigDict(env_prefix="OAUTH2_GOOGLE_")
 
@@ -28,6 +29,7 @@ class OauthYandexSettings(BaseSettings):
     client_id: str
     client_secret: str
     redirect_uri: str
+    scope: str
 
     model_config = SettingsConfigDict(env_prefix="OAUTH2_YANDEX_")
 

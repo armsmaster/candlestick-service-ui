@@ -1,8 +1,6 @@
 import json
-import urllib.parse
 from http import HTTPStatus
 from typing import Annotated
-from uuid import uuid4
 
 import aiohttp
 import jwt
@@ -12,18 +10,12 @@ from redis.asyncio import Redis
 
 from fastapi import APIRouter, Cookie, Depends
 
-from src.api.dependency import get_redis_client
+from src.api.dependency import get_google_auth_processor, get_redis_client
 from src.config import settings
+from src.core import IAuthProcessor
 
 api_router = APIRouter(prefix="/google")
 openid_config_url = "https://accounts.google.com/.well-known/openid-configuration"
-
-
-async def get_google_authorization_endpoint() -> str:
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url=openid_config_url) as resp:
-            response_json = await resp.json()
-            return response_json["authorization_endpoint"]
 
 
 async def get_google_token_endpoint() -> str:
@@ -124,22 +116,11 @@ async def google_auth(
     csrf_token: str,
     candles_session: Annotated[str | None, Cookie()] = None,
     redis_client: Redis = Depends(get_redis_client),
+    google_auth_processor: IAuthProcessor = Depends(get_google_auth_processor),
 ):
     session_data = await redis_client.get(name=f"session:{candles_session}")
     session_data = json.loads(session_data)
     if csrf_token != session_data["csrf_token"]:
         return {"msg": 'csrf_token != session_data["csrf_token"]'}
-    authorization_endpoint = await get_google_authorization_endpoint()
-    params = {
-        "client_id": settings.oauth.google.client_id,
-        "response_type": "code",
-        "scope": "openid email",
-        "redirect_uri": settings.oauth.google.redirect_uri,
-        "state": csrf_token,
-        "nonce": uuid4().hex,
-        "access_type": "offline",
-        "prompt": "consent",
-    }
-    url = authorization_endpoint + "?"
-    url += urllib.parse.urlencode(params)
+    url = await google_auth_processor.generate_url(csrf_token=csrf_token)
     return RedirectResponse(url)
