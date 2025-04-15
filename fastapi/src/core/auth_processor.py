@@ -5,5 +5,5 @@ class IAuthProcessor(ABC):
     """Class responsible for generating external Oauth URI."""
 
     @abstractmethod
-    def generate_url(self, csrf_token: str) -> str:
+    async def generate_url(self, csrf_token: str) -> str:
         raise NotImplementedError

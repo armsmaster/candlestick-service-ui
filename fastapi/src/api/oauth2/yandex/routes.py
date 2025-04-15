@@ -1,8 +1,6 @@
 import json
-import urllib.parse
 from http import HTTPStatus
 from typing import Annotated
-from uuid import uuid4
 
 import aiohttp
 from fastapi.responses import RedirectResponse
@@ -10,14 +8,11 @@ from redis.asyncio import Redis
 
 from fastapi import APIRouter, Cookie, Depends
 
-from src.api.dependency import get_redis_client
+from src.api.dependency import get_redis_client, get_yandex_auth_processor
 from src.config import settings
+from src.core import IAuthProcessor
 
 api_router = APIRouter(prefix="/yandex")
-
-
-async def get_yandex_authorization_endpoint() -> str:
-    return "https://oauth.yandex.ru/authorize"
 
 
 async def get_yandex_token_endpoint() -> str:
@@ -100,21 +95,12 @@ async def yandex_auth(
     csrf_token: str,
     candles_session: Annotated[str | None, Cookie()] = None,
     redis_client: Redis = Depends(get_redis_client),
+    yandex_auth_processor: IAuthProcessor = Depends(get_yandex_auth_processor),
 ):
     session_data = await redis_client.get(name=f"session:{candles_session}")
     session_data = json.loads(session_data)
     if csrf_token != session_data["csrf_token"]:
         return {"msg": 'csrf_token != session_data["csrf_token"]'}
-    authorization_endpoint = await get_yandex_authorization_endpoint()
-    params = {
-        "client_id": settings.oauth.yandex.client_id,
-        "response_type": "code",
-        "scope": "login:email",
-        "redirect_uri": settings.oauth.yandex.redirect_uri,
-        "state": csrf_token,
-        "nonce": uuid4().hex,
-        "force_confirm": "yes",
-    }
-    url = authorization_endpoint + "?"
-    url += urllib.parse.urlencode(params)
+
+    url = await yandex_auth_processor.generate_url(csrf_token=csrf_token)
     return RedirectResponse(url)
