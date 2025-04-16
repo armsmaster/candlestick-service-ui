@@ -59,3 +59,11 @@ async def get_csrf_token_validator(
     session_repository: ISessionRepository = Depends(get_session_repository),
 ) -> AsyncGenerator[CsrfTokenValidator, None]:
     yield CsrfTokenValidator(session_repository=session_repository)
+
+
+async def get_cookie_policy() -> AsyncGenerator[dict, None]:
+    yield {
+        "secure": True,
+        "httponly": True,
+        "expires": settings.app.cookie_expiry_days * settings.app.seconds_in_day,
+    }
