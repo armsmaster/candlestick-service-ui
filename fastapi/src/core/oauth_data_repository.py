@@ -16,7 +16,7 @@ class IOauthDataRepository(ABC):
     async def set_oauth_data(
         self,
         session_id: str,
-        session: OauthData,
+        oauth_data: OauthData,
     ) -> None:
         raise NotImplementedError
 
