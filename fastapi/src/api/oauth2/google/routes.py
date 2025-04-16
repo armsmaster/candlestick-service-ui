@@ -12,10 +12,16 @@ from fastapi import APIRouter, Cookie, Depends
 from src.api.dependency import (
     get_google_auth_processor,
     get_google_code_processor,
+    get_oauth_data_repository,
     get_session_repository,
 )
 from src.config import settings
-from src.core import IAuthProcessor, ICodeProcessor, ISessionRepository
+from src.core import (
+    IAuthProcessor,
+    ICodeProcessor,
+    IOauthDataRepository,
+    ISessionRepository,
+)
 
 api_router = APIRouter(prefix="/google")
 openid_config_url = "https://accounts.google.com/.well-known/openid-configuration"
@@ -70,6 +76,7 @@ async def google_code(
     sessionid: Annotated[str | None, Cookie()] = None,
     google_code_processor: ICodeProcessor = Depends(get_google_code_processor),
     session_repository: ISessionRepository = Depends(get_session_repository),
+    oauth_data_repository: IOauthDataRepository = Depends(get_oauth_data_repository),
 ) -> RedirectResponse:
     session = await session_repository.get_session(session_id=sessionid)
 
@@ -77,6 +84,10 @@ async def google_code(
         return {"msg": "csrf_token != state"}
 
     oauth_data = await google_code_processor.get_oauth_data(code=code)
+    await oauth_data_repository.set_oauth_data(
+        session_id=session.id,
+        oauth_data=oauth_data,
+    )
 
     session.oauth_provider = oauth_data.provider
     session.user_id = oauth_data.user_id
@@ -100,7 +111,7 @@ async def google_auth(
 ):
     session = await session_repository.get_session(session_id=sessionid)
 
-    if session.csrf_token != csrf_token:
+    if csrf_token != session.csrf_token:
         return {"msg": 'csrf_token != session_data["csrf_token"]'}
 
     url = await google_auth_processor.generate_url(csrf_token=csrf_token)

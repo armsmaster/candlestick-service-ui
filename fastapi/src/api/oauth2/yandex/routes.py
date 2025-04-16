@@ -6,12 +6,18 @@ from fastapi.responses import RedirectResponse
 from fastapi import APIRouter, Cookie, Depends
 
 from src.api.dependency import (
+    get_oauth_data_repository,
     get_session_repository,
     get_yandex_auth_processor,
     get_yandex_code_processor,
 )
 from src.config import settings
-from src.core import IAuthProcessor, ICodeProcessor, ISessionRepository
+from src.core import (
+    IAuthProcessor,
+    ICodeProcessor,
+    IOauthDataRepository,
+    ISessionRepository,
+)
 
 api_router = APIRouter(prefix="/yandex")
 
@@ -27,6 +33,7 @@ async def yandex_code(
     sessionid: Annotated[str | None, Cookie()] = None,
     yandex_code_processor: ICodeProcessor = Depends(get_yandex_code_processor),
     session_repository: ISessionRepository = Depends(get_session_repository),
+    oauth_data_repository: IOauthDataRepository = Depends(get_oauth_data_repository),
 ):
     session = await session_repository.get_session(session_id=sessionid)
 
@@ -34,6 +41,10 @@ async def yandex_code(
         return {"msg": "csrf_token != state"}
 
     oauth_data = await yandex_code_processor.get_oauth_data(code=code)
+    await oauth_data_repository.set_oauth_data(
+        session_id=session.id,
+        oauth_data=oauth_data,
+    )
 
     session.oauth_provider = oauth_data.provider
     session.user_id = oauth_data.user_id
