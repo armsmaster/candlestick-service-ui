@@ -2,24 +2,38 @@ services:
 
   react:
     build: ./react/.
-    command: sh -c "npm run dev -- --host"
-    expose:
-      - "8102"
-    # volumes:
-    #   - ./react/src/:/home/node/src/
+    command: sh -c "npm run build"
+    volumes:
+      - ./react/src/:/home/node/src/
+      - dist:/home/node/src/dist/:rw
 
   fastapi:
     build: ./fastapi/.
     command: "gunicorn -w 4 -k uvicorn.workers.UvicornWorker src.main:app -b 0.0.0.0:8101"
+    env_file:
+      - .env
     expose:
       - "8101"
+
+  redis:
+    image: redis:7.2
+    command: redis-server --save 20 1
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
 
   nginx:
     image: nginx:latest
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/configs:/etc/nginx/conf.d:ro
+      - dist:/var/www/candlestick-service-ui/:ro
     expose:
       - "80"
     ports:
       - "80:80"
+
+volumes:
+  dist:
+  redis_data:
