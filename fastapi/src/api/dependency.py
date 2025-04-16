@@ -7,6 +7,8 @@ from fastapi import Depends
 from src.auth_processor import GoogleAuthProcessor, YandexAuthProcessor
 from src.code_processor import GoogleCodeProcessor, YandexCodeProcessor
 from src.config import settings
+from src.core import ISessionRepository
+from src.csrf_token_validator import CsrfTokenValidator
 from src.repository import RedisOauthDataRepository, RedisSessionRepository
 from src.session_maker import SessionMaker
 
@@ -51,3 +53,9 @@ async def get_oauth_data_repository(
 
 async def get_session_maker() -> AsyncGenerator[SessionMaker, None]:
     yield SessionMaker()
+
+
+async def get_csrf_token_validator(
+    session_repository: ISessionRepository = Depends(get_session_repository),
+) -> AsyncGenerator[CsrfTokenValidator, None]:
+    yield CsrfTokenValidator(session_repository=session_repository)
