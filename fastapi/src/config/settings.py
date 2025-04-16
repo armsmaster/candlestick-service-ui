@@ -5,6 +5,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class AppSettings(BaseSettings):
     title: str
     origin_url: str
+    cookie_expiry_days: int
+    seconds_in_day: int = 60 * 60 * 24
 
     model_config = SettingsConfigDict(env_prefix="APP_")
 

@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Cookie, Depends, Response
 
 from src.api.dependency import (
+    get_cookie_policy,
     get_oauth_data_repository,
     get_session_maker,
     get_session_repository,
@@ -19,14 +20,14 @@ async def get_session(
     sessionid: Annotated[str | None, Cookie()] = None,
     session_repository: ISessionRepository = Depends(get_session_repository),
     session_maker: ISessionMaker = Depends(get_session_maker),
+    cookie_policy: dict = Depends(get_cookie_policy),
 ) -> SessionSchema:
     if sessionid is None:
         session = session_maker.create_session()
         await session_repository.set_session(session=session)
-        response.set_cookie(key="sessionid", value=session.id)
     else:
         session = await session_repository.get_session(session_id=sessionid)
-
+    response.set_cookie(key="sessionid", value=session.id, **cookie_policy)
     return SessionSchema.from_session(session)
 
 
@@ -37,6 +38,7 @@ async def reset_session(
     session_repository: ISessionRepository = Depends(get_session_repository),
     oauth_data_repository: IOauthDataRepository = Depends(get_oauth_data_repository),
     session_maker: ISessionMaker = Depends(get_session_maker),
+    cookie_policy: dict = Depends(get_cookie_policy),
 ) -> SessionSchema:
     if sessionid is not None:
         await session_repository.delete_session(session_id=sessionid)
@@ -44,6 +46,6 @@ async def reset_session(
 
     session = session_maker.create_session()
     await session_repository.set_session(session=session)
-    response.set_cookie(key="sessionid", value=session.id)
+    response.set_cookie(key="sessionid", value=session.id, **cookie_policy)
 
     return SessionSchema.from_session(session)
