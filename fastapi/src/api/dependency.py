@@ -8,6 +8,7 @@ from src.auth_processor import GoogleAuthProcessor, YandexAuthProcessor
 from src.code_processor import GoogleCodeProcessor, YandexCodeProcessor
 from src.config import settings
 from src.repository import RedisSessionRepository
+from src.session_maker import SessionMaker
 
 
 async def get_redis_client() -> AsyncGenerator[Redis, None]:
@@ -40,3 +41,7 @@ async def get_session_repository(
     redis_client: Redis = Depends(get_redis_client),
 ) -> AsyncGenerator[RedisSessionRepository, None]:
     yield RedisSessionRepository(redis_client=redis_client)
+
+
+async def get_session_maker() -> AsyncGenerator[SessionMaker, None]:
+    yield SessionMaker()

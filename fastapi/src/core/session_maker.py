@@ -6,5 +6,5 @@ from src.core.data_structures import Session
 class ISessionMaker(ABC):
 
     @abstractmethod
-    async def create_session(self) -> Session:
+    def create_session(self) -> Session:
         raise NotImplementedError
