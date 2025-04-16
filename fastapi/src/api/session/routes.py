@@ -1,11 +1,10 @@
 from typing import Annotated
-from uuid import uuid4
 
 from fastapi import APIRouter, Cookie, Depends, Response
 
-from src.api.dependency import get_session_repository
+from src.api.dependency import get_session_maker, get_session_repository
 from src.api.session.schemas import SessionData
-from src.core import ISessionRepository, Session
+from src.core import ISessionMaker, ISessionRepository
 
 api_router = APIRouter(prefix="/session", tags=["session"])
 
@@ -15,15 +14,10 @@ async def get_session(
     response: Response,
     sessionid: Annotated[str | None, Cookie()] = None,
     session_repository: ISessionRepository = Depends(get_session_repository),
+    session_maker: ISessionMaker = Depends(get_session_maker),
 ) -> SessionData:
     if sessionid is None:
-        session = Session(
-            id=uuid4().hex,
-            csrf_token=f"csrf:{uuid4().hex}",
-            oauth_provider="",
-            user_id="",
-            user_email="",
-        )
+        session = session_maker.create_session()
         await session_repository.set_session(session=session)
         response.set_cookie(key="sessionid", value=session.id)
     else:
@@ -54,17 +48,12 @@ async def reset_session(
     response: Response,
     sessionid: Annotated[str | None, Cookie()] = None,
     session_repository: ISessionRepository = Depends(get_session_repository),
+    session_maker: ISessionMaker = Depends(get_session_maker),
 ) -> SessionData:
     if sessionid is not None:
         await session_repository.delete_session(session_id=sessionid)
 
-    session = Session(
-        id=uuid4().hex,
-        csrf_token=f"csrf:{uuid4().hex}",
-        oauth_provider="",
-        user_id="",
-        user_email="",
-    )
+    session = session_maker.create_session()
     await session_repository.set_session(session=session)
     response.set_cookie(key="sessionid", value=session.id)
 
