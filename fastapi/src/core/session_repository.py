@@ -9,7 +9,7 @@ class ISessionRepository(ABC):
     async def get_session(
         self,
         session_id: str,
-    ) -> Session:
+    ) -> Session | None:
         raise NotImplementedError
 
     @abstractmethod

@@ -6,17 +6,16 @@ import aiohttp
 import jwt
 import jwt.algorithms
 from fastapi.responses import RedirectResponse
-from redis.asyncio import Redis
 
 from fastapi import APIRouter, Cookie, Depends
 
 from src.api.dependency import (
     get_google_auth_processor,
     get_google_code_processor,
-    get_redis_client,
+    get_session_repository,
 )
 from src.config import settings
-from src.core import IAuthProcessor, ICodeProcessor
+from src.core import IAuthProcessor, ICodeProcessor, ISessionRepository
 
 api_router = APIRouter(prefix="/google")
 openid_config_url = "https://accounts.google.com/.well-known/openid-configuration"
@@ -68,29 +67,23 @@ async def google_code(
     state: str,
     code: str,
     scope: str,
-    candles_session: Annotated[str | None, Cookie()] = None,
-    redis_client: Redis = Depends(get_redis_client),
+    sessionid: Annotated[str | None, Cookie()] = None,
     google_code_processor: ICodeProcessor = Depends(get_google_code_processor),
+    session_repository: ISessionRepository = Depends(get_session_repository),
 ) -> RedirectResponse:
-    session_data = await redis_client.get(name=f"session:{candles_session}")
-    session_data = json.loads(session_data)
-    csrf_token = session_data["csrf_token"]
-    if csrf_token != state:
+    session = await session_repository.get_session(session_id=sessionid)
+
+    if session.csrf_token != state:
         return {"msg": "csrf_token != state"}
 
     oauth_data = await google_code_processor.get_oauth_data(code=code)
-    session_data = {
-        "csrf_token": csrf_token,
-        "is_authenticated": True,
-        "oauth_provider": oauth_data.provider,
-        "user_id": oauth_data.user_id,
-        "user_email": oauth_data.user_email,
-    }
 
-    await redis_client.set(
-        name=f"session:{candles_session}",
-        value=json.dumps(session_data),
-    )
+    session.oauth_provider = oauth_data.provider
+    session.user_id = oauth_data.user_id
+    session.user_email = oauth_data.user_email
+
+    await session_repository.set_session(session=session)
+
     return RedirectResponse(settings.app.origin_url)
 
 
@@ -101,13 +94,14 @@ async def google_code(
 )
 async def google_auth(
     csrf_token: str,
-    candles_session: Annotated[str | None, Cookie()] = None,
-    redis_client: Redis = Depends(get_redis_client),
+    sessionid: Annotated[str | None, Cookie()] = None,
     google_auth_processor: IAuthProcessor = Depends(get_google_auth_processor),
+    session_repository: ISessionRepository = Depends(get_session_repository),
 ):
-    session_data = await redis_client.get(name=f"session:{candles_session}")
-    session_data = json.loads(session_data)
-    if csrf_token != session_data["csrf_token"]:
+    session = await session_repository.get_session(session_id=sessionid)
+
+    if session.csrf_token != csrf_token:
         return {"msg": 'csrf_token != session_data["csrf_token"]'}
+
     url = await google_auth_processor.generate_url(csrf_token=csrf_token)
     return RedirectResponse(url)

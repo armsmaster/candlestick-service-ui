@@ -1,14 +1,17 @@
 from typing import AsyncGenerator
 
-import redis
+from redis.asyncio import Redis
+
+from fastapi import Depends
 
 from src.auth_processor import GoogleAuthProcessor, YandexAuthProcessor
 from src.code_processor import GoogleCodeProcessor, YandexCodeProcessor
 from src.config import settings
+from src.repository import RedisSessionRepository
 
 
-async def get_redis_client() -> AsyncGenerator[redis.asyncio.Redis, None]:
-    redis_client = redis.asyncio.Redis(
+async def get_redis_client() -> AsyncGenerator[Redis, None]:
+    redis_client = Redis(
         host=settings.redis.host,
         port=settings.redis.port,
         decode_responses=True,
@@ -31,3 +34,9 @@ async def get_google_code_processor() -> AsyncGenerator[GoogleCodeProcessor, Non
 
 async def get_yandex_code_processor() -> AsyncGenerator[YandexCodeProcessor, None]:
     yield YandexCodeProcessor()
+
+
+async def get_session_repository(
+    redis_client: Redis = Depends(get_redis_client),
+) -> AsyncGenerator[RedisSessionRepository, None]:
+    yield RedisSessionRepository(redis_client=redis_client)
