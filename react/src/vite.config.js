@@ -6,6 +6,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 8102,
-    allowedHosts: ["candlestick.armsmaster.ru"]
+    allowedHosts: ["candlestick.armsmaster.ru", "localhost"]
   },
 })

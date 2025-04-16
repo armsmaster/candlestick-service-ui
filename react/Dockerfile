@@ -1,5 +1,5 @@
 # pull official base image
-FROM node:22-alpine
+FROM node:23-alpine
 
 # set work directory
 WORKDIR /home/node/src/src/
@@ -11,3 +11,6 @@ RUN npm i
 
 # copy project
 COPY ./src/. .
+
+
+
