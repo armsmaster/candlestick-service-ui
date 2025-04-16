@@ -13,7 +13,7 @@ class SessionSchema(BaseModel):
     user_email: str | None
     debug_info: dict | None
 
-    @classmethod
+    @staticmethod
     def from_session(session: Session) -> Self:
         if session.oauth_provider != "":
             is_authenticated = True
@@ -32,5 +32,5 @@ class SessionSchema(BaseModel):
             oauth_provider=oauth_provider,
             user_id=user_id,
             user_email=user_email,
-            debug_info={},
+            debug_info=None,
         )
