@@ -61,15 +61,20 @@ function SignOutComponent({ sessionData, setSessionData }) {
     return (
         <>
             <Navbar.Text>
-                Signed in as: <strong>{sessionData.user_email}</strong> <Button variant='secondary' onClick={() => {
-                    axios.delete('/ui-backend/session/')
-                        .then(response => {
-                            setSessionData(response.data);
-                        })
-                        .catch(error => {
-                            console.error(error);
-                        });
-                }}>Sign Out</Button>
+                <Stack direction='horizontal' gap={1}>
+                    <Button variant='outline-dark' disabled >
+                        {sessionData.user_email}
+                    </Button>
+                    <Button variant='outline-dark' onClick={() => {
+                        axios.delete('/ui-backend/session/')
+                            .then(response => {
+                                setSessionData(response.data);
+                            })
+                            .catch(error => {
+                                console.error(error);
+                            });
+                    }}>Sign Out</Button>
+                </Stack>
             </Navbar.Text>
         </>
     )
@@ -108,7 +113,7 @@ function NavbarComponent() {
     return (
         <Navbar className="bg-body-tertiary">
             <Container>
-                <Navbar.Brand href="#home">Candlestick Service UI</Navbar.Brand>
+                <Navbar.Brand>Candlestick Service UI</Navbar.Brand>
                 <Navbar.Toggle />
                 <Navbar.Collapse className="justify-content-end">
                     {sessionData.is_authenticated ?
