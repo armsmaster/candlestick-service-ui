@@ -1,15 +1,19 @@
-from typing import AsyncGenerator
+from http import HTTPStatus
+from typing import AsyncGenerator, Awaitable, Callable
 
 from redis.asyncio import Redis
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 
-from src.auth_processor import GoogleAuthProcessor, YandexAuthProcessor
-from src.code_processor import GoogleCodeProcessor, YandexCodeProcessor
 from src.config import settings
-from src.core import ISessionRepository
+from src.core import (
+    CsrfTokenValidationException,
+    IOauthDataRepository,
+    ISessionRepository,
+)
 from src.csrf_token_validator import CsrfTokenValidator
 from src.repository import RedisOauthDataRepository, RedisSessionRepository
+from src.services import IOauthService, OauthService
 from src.session_maker import SessionMaker
 
 
@@ -21,22 +25,6 @@ async def get_redis_client() -> AsyncGenerator[Redis, None]:
     )
     yield redis_client
     await redis_client.close()
-
-
-async def get_google_auth_processor() -> AsyncGenerator[GoogleAuthProcessor, None]:
-    yield GoogleAuthProcessor()
-
-
-async def get_yandex_auth_processor() -> AsyncGenerator[YandexAuthProcessor, None]:
-    yield YandexAuthProcessor()
-
-
-async def get_google_code_processor() -> AsyncGenerator[GoogleCodeProcessor, None]:
-    yield GoogleCodeProcessor()
-
-
-async def get_yandex_code_processor() -> AsyncGenerator[YandexCodeProcessor, None]:
-    yield YandexCodeProcessor()
 
 
 async def get_session_repository(
@@ -55,10 +43,35 @@ async def get_session_maker() -> AsyncGenerator[SessionMaker, None]:
     yield SessionMaker()
 
 
-async def get_csrf_token_validator(
+async def get_oauth_service(
     session_repository: ISessionRepository = Depends(get_session_repository),
-) -> AsyncGenerator[CsrfTokenValidator, None]:
-    yield CsrfTokenValidator(session_repository=session_repository)
+    oauth_data_repository: IOauthDataRepository = Depends(get_oauth_data_repository),
+) -> AsyncGenerator[IOauthService, None]:
+
+    yield OauthService(
+        session_repository=session_repository,
+        oauth_data_repository=oauth_data_repository,
+    )
+
+
+async def csrf_token_validate(
+    session_repository: ISessionRepository = Depends(get_session_repository),
+) -> AsyncGenerator[Callable[[str, str], Awaitable[None]], None]:
+
+    async def inner(csrf_token: str, session_id: str):
+        csrf_token_validator = CsrfTokenValidator(session_repository=session_repository)
+        try:
+            await csrf_token_validator.validate(
+                csrf_token=csrf_token,
+                session_id=session_id,
+            )
+        except CsrfTokenValidationException:
+            raise HTTPException(
+                status_code=HTTPStatus.UNAUTHORIZED,
+                detail="CSRF Validation Error",
+            )
+
+    yield inner
 
 
 async def get_cookie_policy() -> AsyncGenerator[dict, None]:
