@@ -1,16 +1,16 @@
 import json
 from http import HTTPStatus
-from typing import Annotated
+from typing import Annotated, Awaitable, Callable
 
 import aiohttp
 import jwt
 import jwt.algorithms
 from fastapi.responses import RedirectResponse
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException
+from fastapi import APIRouter, Cookie, Depends
 
 from src.api.dependency import (
-    get_csrf_token_validator,
+    csrf_token_validate,
     get_google_auth_processor,
     get_google_code_processor,
     get_oauth_data_repository,
@@ -18,10 +18,8 @@ from src.api.dependency import (
 )
 from src.config import settings
 from src.core import (
-    CsrfTokenValidationException,
     IAuthProcessor,
     ICodeProcessor,
-    ICsrfTokenValidator,
     IOauthDataRepository,
     ISessionRepository,
 )
@@ -80,27 +78,17 @@ async def google_code(
     google_code_processor: ICodeProcessor = Depends(get_google_code_processor),
     session_repository: ISessionRepository = Depends(get_session_repository),
     oauth_data_repository: IOauthDataRepository = Depends(get_oauth_data_repository),
-    csrf_token_validator: ICsrfTokenValidator = Depends(get_csrf_token_validator),
+    csrf_validate: Callable[[str, str], Awaitable] = Depends(csrf_token_validate),
 ) -> RedirectResponse:
-    session = await session_repository.get_session(session_id=sessionid)
-
-    try:
-        csrf_token_validator.validate(
-            csrf_token=state,
-            session_id=sessionid,
-        )
-    except CsrfTokenValidationException:
-        raise HTTPException(
-            status_code=HTTPStatus.UNAUTHORIZED,
-            detail="CSRF Validation Error",
-        )
+    await csrf_validate(state, sessionid)
 
     oauth_data = await google_code_processor.get_oauth_data(code=code)
     await oauth_data_repository.set_oauth_data(
-        session_id=session.id,
+        session_id=sessionid,
         oauth_data=oauth_data,
     )
 
+    session = await session_repository.get_session(session_id=sessionid)
     session.oauth_provider = oauth_data.provider
     session.user_id = oauth_data.user_id
     session.user_email = oauth_data.user_email
@@ -119,19 +107,9 @@ async def google_auth(
     csrf_token: str,
     sessionid: Annotated[str | None, Cookie()] = None,
     google_auth_processor: IAuthProcessor = Depends(get_google_auth_processor),
-    session_repository: ISessionRepository = Depends(get_session_repository),
-    csrf_token_validator: ICsrfTokenValidator = Depends(get_csrf_token_validator),
-):
-    try:
-        csrf_token_validator.validate(
-            csrf_token=csrf_token,
-            session_id=sessionid,
-        )
-    except CsrfTokenValidationException:
-        raise HTTPException(
-            status_code=HTTPStatus.UNAUTHORIZED,
-            detail="CSRF Validation Error",
-        )
+    csrf_validate: Callable[[str, str], Awaitable] = Depends(csrf_token_validate),
+) -> RedirectResponse:
+    await csrf_validate(csrf_token, sessionid)
 
     url = await google_auth_processor.generate_url(csrf_token=csrf_token)
     return RedirectResponse(url)
