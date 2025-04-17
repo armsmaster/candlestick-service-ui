@@ -85,8 +85,8 @@ function SignInComponent({ csrf_token }) {
         <>
             <Navbar.Text>
                 <Stack direction='horizontal' gap={1}>
-                    <SignInWithGoogle url={"/ui-backend/oauth2/google/auth/?csrf_token="} csrf_token={csrf_token} />
-                    <SignInWithYandex url={"/ui-backend/oauth2/yandex/auth/?csrf_token="} csrf_token={csrf_token} />
+                    <SignInWithGoogle url={"/ui-backend/oauth/google/auth/?csrf_token="} csrf_token={csrf_token} />
+                    <SignInWithYandex url={"/ui-backend/oauth/yandex/auth/?csrf_token="} csrf_token={csrf_token} />
                 </Stack>
                 {/* <a href={"/ui-backend/oauth2/yandex/auth/?csrf_token=" + csrf_token}>Yandex</a> */}
                 {/* <a href={"/ui-backend/oauth2/yandex/auth/?csrf_token=" + csrf_token}>Yandex</a> */}
