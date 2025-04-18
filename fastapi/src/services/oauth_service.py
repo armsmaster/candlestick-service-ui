@@ -1,7 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Literal
 
-from src.core import IAuthProcessor, ICodeProcessor, ISessionRepository
+from src.core import (
+    IAuthProcessor,
+    ICodeProcessor,
+    IOauthDataRepository,
+    ISessionRepository,
+)
 
 
 class IOauthService(ABC):
@@ -9,7 +14,11 @@ class IOauthService(ABC):
     OAUTH_PROVIDER = Literal["google", "yandex"]
 
     @abstractmethod
-    def __init__(self, session_repository: ISessionRepository):
+    def __init__(
+        self,
+        session_repository: ISessionRepository,
+        oauth_data_repository: IOauthDataRepository,
+    ):
         raise NotImplementedError
 
     @abstractmethod
