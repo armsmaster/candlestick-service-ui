@@ -9,11 +9,12 @@ from src.config import settings
 from src.core import (
     CsrfTokenValidationException,
     IOauthDataRepository,
+    ISessionMaker,
     ISessionRepository,
 )
 from src.csrf_token_validator import CsrfTokenValidator
 from src.repository import RedisOauthDataRepository, RedisSessionRepository
-from src.services import IOauthService, OauthService
+from src.services import IOauthService, ISessionService, OauthService, SessionService
 from src.session_maker import SessionMaker
 
 
@@ -51,6 +52,19 @@ async def get_oauth_service(
     yield OauthService(
         session_repository=session_repository,
         oauth_data_repository=oauth_data_repository,
+    )
+
+
+async def get_session_service(
+    session_repository: ISessionRepository = Depends(get_session_repository),
+    oauth_data_repository: IOauthDataRepository = Depends(get_oauth_data_repository),
+    session_maker: ISessionMaker = Depends(get_session_maker),
+) -> AsyncGenerator[ISessionService, None]:
+
+    yield SessionService(
+        session_repository=session_repository,
+        oauth_data_repository=oauth_data_repository,
+        session_maker=session_maker,
     )
 
 
