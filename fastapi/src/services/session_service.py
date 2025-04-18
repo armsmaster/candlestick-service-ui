@@ -15,9 +15,9 @@ class ISessionService(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    async def get_session(session_id: str | None) -> Session:
+    async def get_session(self, session_id: str | None) -> Session:
         raise NotImplementedError
 
     @abstractmethod
-    async def drop_session(session_id: str) -> Session:
+    async def drop_session(self, session_id: str) -> Session:
         raise NotImplementedError
