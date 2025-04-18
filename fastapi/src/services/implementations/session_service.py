@@ -1,5 +1,5 @@
 from src.core import IOauthDataRepository, ISessionMaker, ISessionRepository, Session
-from src.services import ISessionService
+from src.services.session_service import ISessionService
 
 
 class SessionService(ISessionService):
@@ -15,7 +15,7 @@ class SessionService(ISessionService):
         self.session_maker = session_maker
 
     async def get_session(self, session_id: str | None) -> Session:
-        session = self._fetch_session(session_id=session_id)
+        session = await self._fetch_session(session_id=session_id)
         if session is None:
             session = self.session_maker.create_session()
             await self.session_repository.set_session(session=session)
